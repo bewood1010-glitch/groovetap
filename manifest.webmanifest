@@ -1,0 +1,16 @@
+{
+  "name": "그루브탭",
+  "short_name": "그루브탭",
+  "description": "바이닐 DJ를 위한 BPM 측정기. 탭하거나 마이크로 자동 측정합니다.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0B0C",
+  "theme_color": "#0B0B0C",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

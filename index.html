@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>그루브탭</title>
+<meta name="description" content="바이닐 DJ를 위한 BPM 측정기. 탭하거나 마이크로 자동 측정합니다.">
+<meta name="theme-color" content="#0B0B0C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="그루브탭">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<style>
+@font-face {
+  font-family: "BPM Digits";
+  src: url("fonts/big-shoulders-800.woff") format("woff");
+  font-weight: 800; font-display: block;
+}
+:root {
+  --bg: #0B0B0C; --panel: #1C1C1F; --line: #2C2C30;
+  --fg: #F3F1EA; --muted: #9A978E; --amber: #FFB020; --amber-dim: rgba(255,176,32,.28);
+  --f-ui: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --f-num: "BPM Digits", "DIN Condensed", "Arial Narrow", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); overflow: hidden; overscroll-behavior: none; }
+body { font-family: var(--f-ui); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, .pad:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+
+.app { position: fixed; inset: 0; display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px 6px; }
+.brand { font-size: 14px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.wake { font-size: 11px; color: var(--amber); border: 1px solid var(--amber-dim); border-radius: 999px; padding: 1px 7px; }
+.seg { display: flex; background: var(--panel); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: none; padding: 7px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--amber); color: #1a1205; }
+
+.envs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px 16px 0; }
+.envs button { border: 1px solid var(--line); background: none; border-radius: 12px; padding: 7px 4px; display: grid; gap: 1px; }
+.envs b { font-size: 14px; font-weight: 600; }
+.envs small { font-size: 10.5px; color: var(--muted); }
+.envs button[aria-pressed="true"] { border-color: var(--amber); }
+.envs button[aria-pressed="true"] b { color: var(--amber); }
+
+.pad { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  touch-action: manipulation; cursor: pointer; outline: none; }
+.wave { width: calc(100% - 32px); height: 128px; display: block; }
+.ring { position: absolute; left: 50%; top: 50%; width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%;
+  border: 2px solid var(--amber); opacity: 0; pointer-events: none; }
+.ring.go { animation: ring .42s ease-out; }
+@keyframes ring { from { opacity: .8; transform: scale(.7) } to { opacity: 0; transform: scale(1.15) } }
+.bpm { font-family: var(--f-num); font-weight: 800; font-size: min(34vw, 150px); line-height: .85; color: var(--amber);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transition: opacity .2s; }
+.bpm.dim { opacity: .35; }
+.bpm.beat { animation: beat .16s ease-out; }
+@keyframes beat { from { transform: scale(1.03) } to { transform: scale(1) } }
+.unit { font-size: 12px; font-weight: 600; letter-spacing: .3em; color: var(--muted); margin-right: -.3em; }
+.dots { display: flex; gap: 7px; height: 9px; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: #2a2a2c; }
+.dots i.on { background: var(--amber); }
+.conf { width: 62%; display: grid; gap: 5px; font-size: 12px; color: var(--muted); text-align: center; }
+.conf .bar { height: 5px; border-radius: 3px; background: #2a2a2c; overflow: hidden; }
+.conf .bar i { display: block; height: 100%; width: 0; background: var(--amber); transition: width .25s; }
+.status { margin: 0; min-height: 2.8em; padding: 0 28px; text-align: center; font-size: 13.5px; line-height: 1.45; color: var(--muted); text-wrap: balance; }
+.status b { color: var(--fg); font-weight: 600; }
+
+.controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; padding: 10px 14px 14px; }
+.controls button { height: 58px; border-radius: 16px; border: 0; background: var(--panel); font-size: 16px; font-weight: 600; }
+.controls button:active { background: #2a2a2e; }
+.controls #main.listening { background: var(--amber); color: #1a1205; }
+.controls button[disabled] { opacity: .35; }
+
+.keepawake { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .ring.go, .bpm.beat { animation: none; } }
+@media (min-height: 760px) { .wave { height: 160px; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="brand"><span id="app-name">그루브탭</span><span class="wake" id="wake" hidden>화면 켜짐</span></div>
+    <div class="seg" role="group" aria-label="측정 방식">
+      <button id="m-tap" aria-pressed="true">탭</button>
+      <button id="m-auto" aria-pressed="false">오토</button>
+    </div>
+  </header>
+
+  <div class="envs" id="envs" role="group" aria-label="듣는 환경" hidden></div>
+
+  <section class="pad" id="pad" role="button" tabindex="0" aria-label="박자에 맞춰 탭">
+    <canvas class="wave" id="wave" hidden aria-hidden="true"></canvas>
+    <div class="ring" id="ring"></div>
+    <div class="bpm" id="bpm" aria-live="polite">—</div>
+    <div class="unit">BPM</div>
+    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+    <div class="conf" id="conf" hidden><div class="bar"><i id="conf-bar"></i></div><span id="conf-text">신뢰도 —</span></div>
+    <p class="status" id="status">화면 아무 곳이나 박자에 맞춰 탭하세요</p>
+  </section>
+
+  <footer class="controls">
+    <button id="half" aria-label="절반으로">÷2</button>
+    <button id="main">초기화</button>
+    <button id="double" aria-label="두 배로">×2</button>
+  </footer>
+</main>
+<video class="keepawake" id="keepawake" src="assets/keepawake.mp4" playsinline muted loop preload="auto"></video>
+
+<script src="bpm-core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
